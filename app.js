@@ -37,11 +37,8 @@ const authenticated_menu=[
     ]},
     //This menu item allows the user to logout
     {label:"Logout",function:"logout()", home:"Logout"},
-    //This menu item builds a sub menu that provides the user with the functionality to request time off and see their requests
-    {label:"Time Off",id:"menu1",menu:[
-        {label:"Request Time Off",function:"navigate({fn:'request_time_off'})"}, 
-        {label:"My Requests",function:"navigate({fn:'show_time_off'})"}, 
-    ]},
+    //This menu item allows users to view the daily tasks to be performed
+    {label:"Daily Task",function:"navigate({fn:'show_tasks'})",panel:"daily_tasks"}, 
     //This menu item allows the user to add additional users. Note the "roles" property of the object. Only users with the role of "manager", "owner", or "administrator" will see this menu item. User roles are not heirachical. All user types you wish to see a menu item must be listed in the elements of the array.
     {label:"Add Employee",function:"navigate({fn:'create_account'})", roles:["manager","owner","administrator"]}, 
     //This menu item adds the menu item for updating an inventory count. Notice how a parameter is passed to the "ice_cream_inventory" function
@@ -56,8 +53,9 @@ const authenticated_menu=[
 
 ]
 
+filename="app.js"// used to control logging
 
-function show_home(){
+function show_home(){log(4,arguments,filename,show_home)
     
     //builds the menu for the home screen
     const menu=[]
@@ -84,44 +82,232 @@ function show_home(){
     hide_menu()
 }
 
-function get_user_name(){
+function get_user_name(){log(2,arguments,filename,get_user_name)
     //returns the user's first and last name. Used when building the navigation menu to be the label for the menu items related to maintaining the user. The get_user_data function reads the user information from the data cookie that is created when the user logs in.
     data=get_user_data()
     return data.first_name + " " + data.last_name
 }
 
-async function show_locations(){
-    //This function demonstrates how to render a view that is created in Airtable. The list of locations is a view of the Store table in airtable. It is shared in Airtable. The ID of the share is all that is needed to display the share embedded in this webpage. Generally Airtable shared items are visible by anyone with the link or id, so any data that must be secured should not be rendered using this method. However, it is a quick and easy way to display data stored in airtable.
-    const width = 400
-    //here the HTML of the page is configured to display the shared view in airtable.
-    tag("canvas").innerHTML=`<div class="center-screen"><iframe class="airtable-embed" src="https://airtable.com/embed/${show_locations_share}?backgroundColor=cyan" frameborder="0" onmousewheel="" width="${width}" height="500" style="background-color: white; border: 1px solid #ccc;"></iframe></div>`
+
+async function show_tasks(store){log(4,arguments,filename,show_tasks)
+    const user_data=get_user_data()
+    
+
+    let store_id
+
+    if(store){
+        store_id=store
+    }else if(user_data.store.length===1){
+        store_id=user_data.store[0]
+    }else{
+        // we don't know which store to use. ask the user
+
+
+        if(tag("daily_tasks").style.display!=="none"){
+            tag("daily_tasks").style.display="none"
+            return
+          }
+      
+
+
+        const html=['<form>Store: <select name="store">']
+        for(store of user_data.store){
+            html.push(`<option value="${store}">${store_list()[store]}</option>`)
+        }
+        //When the user selects the store using the form, the "show_tasks" function is invoked on the submission of the form to populate the rest of this page with the data for that store
+        html.push(`</select>
+                    <button type="button" id="choose_store_button" onclick="show_tasks(store.options[store.selectedIndex].value)">Submit</button>
+                    </form>`)
+        tag("daily_tasks").innerHTML=html.join("")
+
+        tag("daily_tasks").style.display="block"
+        return
+    }
+
+    tag("daily_tasks").style.display="none"
+
+    tag("canvas").innerHTML=` 
+    <div class="page">
+        <h2>Daily Tasks</h2>
+        <div id="tasks_panel">
+        <i class="fas fa-spinner fa-pulse"></i>
+        </div>
+    </div>
+    `
+
+    
+    //retrieve the store data using the local server_request function to request the Google App Script function "get_stores" retrieve the employee data.
+    let response=await server_request({
+        mode:"get_tasks"
+    })
+
+    
+    // a status of success indicates that the server request ran without error
+    if(response.status==="success"){
+        // html is an array that we'll use to build the HTML to render
+        const html=['<table><tr><td>Each of these tasks must be completed each day the store is open.</td></tr>']
+
+        
+        //add the headers to the table
+
+        // for(const field of fields){
+        //     html.push("<th>")
+        //     html.push(field.label)
+        //     html.push("</th>")
+        // }
+
+        //process through the employee records that were returned and add them to the table.
+        let current_group=""
+        for(const record of response.records){
+            if (current_group !== record.fields.group){
+                current_group = record.fields.group
+                html.push('</table><br>')
+                html.push('<table cellpadding="5"><tr><td colspan="2" style="background-color:white"><span style="color:#800000;font-weight:bold">')
+                html.push(current_group)
+                html.push('</span></td></tr>')
+            }
+             console.log(record)
+             html.push("<tr><td><b>")
+             html.push(record.fields.task)
+             html.push(": </b>")
+             html.push(record.fields.details)
+             html.push(`</td><td id="${record.id}">`)
+             html.push(`<button type="button" data-store="${store_id}" id="button-${record.id}" onclick="record_task(this)">Done</button>`)
+                
+             html.push("</td></tr>")
+        }
+        html.push("</table>")
+        //console.log(html) 
+        tag("tasks_panel").innerHTML=html.join("")
+    
+    }else{
+        tag("tasks_panel").innerHTML="Unable to get store list: " + response.message + "."
+    }    
+
+    
+    hide_menu()
+
+
+    response=await server_request({
+        mode:"get_activity",
+        store:user_data.store_list[store_id]
+    })
+
+    if(response.status==="success"){
+        for(const record of response.records){
+            console.log(record)
+            tag(record.fields.task).innerHTML='<i class="fa-solid fa-check"></i>'
+        }
+    }else{
+        message({
+            message:"Unable to get store list: " + response.message + ".",
+            title:"Error",
+            kind:"error",
+            seconds:8
+        })        
+    }  
+}
+
+
+async function record_task(button){
+    const task_id=button.id.split("-")[1]
+
+    tag(task_id).innerHTML='<i class="fas fa-spinner fa-pulse"></i>'
+    const response=await server_request({
+        mode:"record_task_done",
+        task:task_id,
+        store:button.dataset.store
+    })
+    if(response.status==="success"){
+            tag(task_id).innerHTML='<i class="fa-solid fa-check"></i>'
+    }else{
+        message({
+            message:"Unable to get store list: " + response.message + ".",
+            title:"Error",
+            kind:"error",
+            seconds:8
+        })        
+    }  
+
+}
+
+
+async function show_locations(){log(4,arguments,filename,show_locations)
+    // message({
+    //     message:"Once programmed, this feature will show the details about store locations",
+    //     title:"Comming Soon...",
+    //     kind:"",
+    //     seconds:10
+    // })
+
+
+    tag("canvas").innerHTML=` 
+    <div class="page">
+        <h2>Store List</h2>
+        <div id="store_list_panel">
+        <i class="fas fa-spinner fa-pulse"></i>
+        </div>
+    </div>
+    `
+    
+    //retrieve the store data using the local server_request function to request the Google App Script function "get_stores" retrieve the employee data.
+    const response=await server_request({
+        mode:"get_stores"
+    })
+
+    //build the headers for the stores table
+    const fields=[
+        {name:"address",label:"Address"},
+        {name:"city",label:"City"},
+        {name:"state",label:"State"},
+        {name:"phone",label:"Phone"},
+    ]
+
+
+    // a status of success indicates that the server request ran without error
+    if(response.status==="success"){
+        // html is an array that we'll use to build the HTML to render
+        const html=['<table style="background-color:white"><tr>']
+        //add the headers to the table
+        for(const field of fields){
+            html.push("<th>")
+            html.push(field.label)
+            html.push("</th>")
+        }
+
+        //process through the employee records that were returned and add them to the table.
+        for(const record of response.records){
+            html.push("<tr>")
+            console.log(record)
+            for(const field of fields){
+                html.push("<td>")
+                html.push(record.fields[field.name])
+                html.push("</td>")
+            }
+
+            html.push("</tr>")
+        }
+        html.push("</table>")
+        console.log(html) 
+        tag("store_list_panel").innerHTML=html.join("")
+    
+    }else{
+        tag("store_list_panel").innerHTML="Unable to get store list: " + response.message + "."
+    }    
+
+
+
+
+
+
+
+
+    console.log(response)
     hide_menu()
 }
 
-async function request_time_off(){
-    //This is an example of embedding a data form that is created in Airtable. This form allows a user to make a "time off" request. This form is not secure. Anyone with the link or the id for the form can use it to enter data into Airtable. However, it is easy to build and share an Airtable form. 
-    if(!logged_in()){show_home();return}
-    const width = 300
-    //This form is configured to accept a parameter of the user that is requesting time off. All this means is that the Airtable form, when rendered, will populate with the appropriate user. The user can still change that information and request time off for any user stored in Airtable.
-    const url=`https://airtable.com/embed/${request_time_off_share}?prefill_employee=${get_user_data().id}`
-    console.log("url",url, get_user_data())
-    tag("canvas").innerHTML=`<div class="center-screen"><iframe class="airtable-embed" src="${url}" frameborder="0" onmousewheel="" width="${width}" height="500" style="background-color: white; border: 1px solid #ccc;"></iframe></div>`
-    hide_menu()
-}
 
-async function show_time_off(){
-    //Another example of rendering data directly from Airtable. This function will display the time off requests for a particular employee
-    if(!logged_in()){show_home();return}
-    const width = 300
-    const user_data = get_user_data()
-    //notice the filter added to this URL. This filter will be applied to the table in Airtable and will only display the items defined by the filter.
-    const url=`https://airtable.com/embed/${show_time_off_share}?filter_employee=${user_data.first_name}+${user_data.last_name}`
-    console.log("url",url, get_user_data())
-    tag("canvas").innerHTML=`<div class="center-screen"><iframe class="airtable-embed" src="${url}" frameborder="0" onmousewheel="" width="${width}" height="500" style="background-color: white; border: 1px solid #ccc;"></iframe></div>`
-    hide_menu()
-}
-
-async function record_inventory(params){
+async function record_inventory(params){log(4,arguments,filename,record_inventory)
     console.log('in record_inventory')
 
     if(!logged_in()){show_home();return}//in case followed a link after logging out. This prevents the user from using this feature when they are not authenticated.
@@ -293,7 +479,7 @@ async function record_inventory(params){
     }
 }
 
-async function show_inventory_summary(params){
+async function show_inventory_summary(params){log(4,arguments,filename,show_inventory_summary)
     console.log('in show_inventory_summary')
     //this function is used both the record inventory counts and to build a summary report. The "style" property of the params sent to the function determines whether the function is in "count" mode or "summary" mode. Also, if the user has access to multiple stores, they will be presented with the option to select the store they wish to work with.
 
@@ -427,7 +613,7 @@ async function show_inventory_summary(params){
 }
 
 
-function add_buttons(row,col){
+function add_buttons(row,col){log(2,arguments,filename,add_buttons)
     //this function is used to create the input buttons for recording the inventory observations. Notice that we only use the options for case 3. We might use the other options in the future.
     const box = tag(row + "|" + col.replace(/\s/g,"_"))    
     const container = box.parentElement
@@ -457,7 +643,7 @@ function add_buttons(row,col){
         }
 }
 
-function get_div_button(box,width,value,label){
+function get_div_button(box,width,value,label){log(2,arguments,filename,get_div_button)
     //This sets the color of the buttons to grey when they are selected to visually show that the value has been entered for that item.
     if(label===undefined)(label=value)
     const div=document.createElement('div')
@@ -487,7 +673,7 @@ function get_div_button(box,width,value,label){
 }
 
 
-function move_down(source){
+function move_down(source){log(3,arguments,filename,move_down)
     // aids in navigation. selects the next cell below when a value is updated
     const ids=source.id.split("|")
     ids[1]=ids[1].replace(/_/g," ")
@@ -504,7 +690,7 @@ function move_down(source){
     tag(next_flavor + "|" + next_container.replace(/\s/g,"_")).focus()
 }
 
-function flavor_total(flavor_id){
+function flavor_total(flavor_id){log(4,arguments,filename,flavor_total)
     //used to calculate the running total for observations as they are entered into the input form
     let flavor_total=0
     for(const key of Object.keys(window.cols)){
@@ -516,7 +702,7 @@ function flavor_total(flavor_id){
     return flavor_total
 }
 
-async function update_observation(entry){
+async function update_observation(entry){log(3,arguments,filename,update_observation)
     //this is the function that is called to update an observation when the value is change in the input form.
     //console.log(entry.parentElement)
 
@@ -609,7 +795,7 @@ async function update_observation(entry){
 }
 
 
-async function employee_list(){
+async function employee_list(){log(4,arguments,filename,employee_list)
     //this function displays an employee list. If the user role allows, the option to update the user record in Google App Script is presented
     //Note: user information is stored in Airtable. However, to avoid the need to repeatedly access Airtable to retrieve user information, a record is stored in Google App Script. This record must be updated when changes are made to user information in Airtable, thus the need for user information to be updated.
     if(!logged_in()){show_home();return}//in case followed a link after logging out

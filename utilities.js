@@ -1,4 +1,7 @@
-function hide_elements(className){// adds the hidden class to all elements of the given class name
+filename="utilities.js"// used to control logging
+
+function hide_elements(className){ log(2,arguments,filename,hide_elements)
+    // adds the hidden class to all elements of the given class name
     if(Array.isArray(className)){
         var classes=className
     }else{
@@ -11,7 +14,8 @@ function hide_elements(className){// adds the hidden class to all elements of th
         }
     }
 }
-function show_elements(className){// remvoes the hidden class to all elements of the given class name
+function show_elements(className){log(2,arguments,filename,show_elements)
+    // remvoes the hidden class to all elements of the given class name
     if(Array.isArray(className)){
         var classes=className
     }else{
@@ -26,7 +30,7 @@ function show_elements(className){// remvoes the hidden class to all elements of
 }
 
 
-function getAllSiblings(elem, filter) {
+function getAllSiblings(elem, filter) {log(2,arguments,filename,getAllSiblings)
     //used to help with the creation of the input buttons to group options for each flavor.
     var sibs = [];
     elem = elem.parentNode.firstChild;
@@ -38,7 +42,8 @@ function getAllSiblings(elem, filter) {
     return sibs;
 }
 
-function json_params_for_url(params){ // encode an object without the trailing equalsigns
+function json_params_for_url(params){log(2,arguments,filename,json_params_for_url)
+    // encode an object without the trailing equalsigns
     const data=btoa(JSON.stringify(params))
     if(data.slice(-2)==="=="){
         return data.slice(0, -2)
@@ -51,11 +56,12 @@ function json_params_for_url(params){ // encode an object without the trailing e
     return data    
 }
 
-async function submit_form(form){//this function is not used, but could be used to submit form data to google app script to update Airtable.
+async function submit_form(form){log(2,arguments,filename,submit_form)
+    //this function is not used, but could be used to submit form data to google app script to update Airtable.
     return await server_request(form_data(form))
 }
 
-function form_data(html_tag,spin){
+function form_data(html_tag,spin){log(2,arguments,filename,form_data)
     // read the informatoin from a form and put it into an object, ready to be sent to server_request
     const payload={}// the object to return with the form's values
     // if the html_tag sent it is a button, and spin is true, change the button's text to a spinner
@@ -98,10 +104,11 @@ function form_data(html_tag,spin){
             payload[key]=payload[key][0]
         }
     }
+    console.log("in form_data.  Payload",payload)
     return payload
 }
 
-function url_parameters(){
+function url_parameters(){log(1,arguments,filename,url_parameters)
     if(!location.search){
         return {fn:"show_home"}  
     }else if(location.search.includes("=")){
@@ -121,7 +128,8 @@ function url_parameters(){
     }
 }
 
-function set_cookie(name,value,days) {//used to update cookie information
+function set_cookie(name,value,days) {log(2,arguments,filename,set_cookie)
+    //used to update cookie information
     var expires = "";
     if (days) {
         var date = new Date();
@@ -131,7 +139,8 @@ function set_cookie(name,value,days) {//used to update cookie information
     document.cookie = name + "=" + (value || "")  + expires + "; path=/";
 }
 
-function get_cookie(name) {//used to retrieve cookie by name
+function get_cookie(name) {log(2,arguments,filename,get_cookie)
+    //used to retrieve cookie by name
     var nameEQ = name + "=";
     var ca = document.cookie.split(';');
     for(var i=0;i < ca.length;i++) {
@@ -142,17 +151,19 @@ function get_cookie(name) {//used to retrieve cookie by name
     return null;
 }
 
-function erase_cookie(name) {//used to delete a cookie by name
+function erase_cookie(name) {log(2,arguments,filename,erase_cookie)
+    //used to delete a cookie by name
     //console.log("at erase cookie", name)
     set_cookie(name,"deleted",-2)
     //document.cookie = name+'=; Max-Age=-99999999;';  
 }
 
-function tag(id){//Adds an ID to an HTML element
+function tag(id){log(1,arguments,filename,tag)
+    //Adds an ID to an HTML element
     return document.getElementById(id)
 }
 
-function toggle(tag_or_id,display="block"){
+function toggle(tag_or_id,display="block"){log(2,arguments,filename,toggle)
     
     
     let element=tag_or_id
@@ -172,7 +183,8 @@ function toggle(tag_or_id,display="block"){
     }
 }
 
-function intersect(string_or_array, array_or_string) {// returns the intersection of two arrays
+function intersect(string_or_array, array_or_string) {log(2,arguments,filename, intersect)
+    // returns the intersection of two arrays
     if(Array.isArray(string_or_array)){
       var a=string_or_array
     }else{
@@ -189,7 +201,7 @@ function intersect(string_or_array, array_or_string) {// returns the intersectio
     return [...new Set(a)].filter(x => setB.has(x));
 }
 
-function is_valid_email(email){
+function is_valid_email(email){log(2,arguments,filename,is_valid_email)
     // returns true if true if email is in form:
     // anystring@anystring.anystring
     var re = /\S+@\S+\.\S+/;

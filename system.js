@@ -1,10 +1,14 @@
 let current_menu=[]
 const base=window.location.protocol + "//" + window.location.host + "/"
 
-async function server_request(payload, callback){
+filename="system.js"// used to control logging
+
+
+
+async function server_request(payload, callback){  log(3,arguments,filename,server_request)
     //This function is used to invoke a function in Google App Script to interact with Airtable. This is desireable so that we can isolate the information needed to interact with the data from the client browser.
     //if a callback is not provided  this function waits until the call is complete
-
+    
     if(document.cookie){//cookies are used to manage authenticated user information. The cookies are sent to Google App Script to ensure that users have appropriate authication and credentials update the database.
       payload.cookie=document.cookie
     }
@@ -45,7 +49,7 @@ async function server_request(payload, callback){
     }
 }
 
-async function initialize_app(){
+async function initialize_app(){ log(3,arguments,filename,initialize_app)
     //This function initializes the page when it is loaded.
     let state="{}"
     window.onpopstate = function (event) {
@@ -70,7 +74,7 @@ async function initialize_app(){
 }
 
 
-function navigate(parameters, show_url=true, place_in_browser_history=true){
+function navigate(parameters, show_url=true, place_in_browser_history=true){log(3,arguments,filename,navigate)
     //update history so we can navigate backward.  
     //update location so we can refresh and copy the URL.
     //any function called with navigate should build the whole canvas
@@ -113,7 +117,7 @@ function navigate(parameters, show_url=true, place_in_browser_history=true){
     
 }
 
-function build_menu(menu_data){
+function build_menu(menu_data){log(3,arguments,filename,build_menu)
     current_menu.length=0 // reset the current menu
     const menu=[]
     const user_data=get_user_data() || []
@@ -125,8 +129,8 @@ function build_menu(menu_data){
     console.log('menu_data',menu_data)
     tag("menu").innerHTML=menu.join("")
 }
-
-function add_menu_item(menu, menu_data, roles){//used to add a menu item
+//used to add a menu item
+function add_menu_item(menu, menu_data, roles){log(2,arguments,filename,add_menu_item)
     if(menu_data.menu && !menu_data.label){
         // it must be an import of another menu
         for(const item of menu_data.menu){
@@ -178,16 +182,19 @@ function add_menu_item(menu, menu_data, roles){//used to add a menu item
     }
 }
 
-function show_menu(){//This function displays the menu
+function show_menu(){log(3,arguments,filename,show_menu)
+    //This function displays the menu
     tag("menu-button").style.display="none"
     tag("menu").style.display="block"
 }
-function hide_menu(){//Used to hide the menu (show only the parallel lines)
+function hide_menu(){log(3,arguments,filename,hide_menu)
+    //Used to hide the menu (show only the parallel lines)
     tag("menu-button").style.display="block"
     tag("menu").style.display="none"
 }
 
-function toggle_sub_menu(button, id){//Used to expande and collapse submenus
+function toggle_sub_menu(button, id){log(3,arguments,filename,working)
+    //Used to expande and collapse submenus
     if(toggle(id)){
         button.getElementsByTagName("i")[0].className="fas fa-chevron-up"
     }else{
@@ -195,7 +202,8 @@ function toggle_sub_menu(button, id){//Used to expande and collapse submenus
     }
 }
 
-function working(status=true){//used to present a visual cue (spinning wheel) to show that the app is processing
+function working(status=true){log(3,arguments,filename)
+    //used to present a visual cue (spinning wheel) to show that the app is processing
     try{  
         if(status){
             tag("hamburger").className="fas fa-spinner fa-pulse"
@@ -209,7 +217,8 @@ function working(status=true){//used to present a visual cue (spinning wheel) to
     }
 }
 
-function show_message(message, tag_or_id, seconds){//used to display alerts to the user. The alert can be set to disappear after a specified number of seconds.
+function show_message(message, tag_or_id, seconds){log(3,arguments,filename,show_message)
+    //used to display alerts to the user. The alert can be set to disappear after a specified number of seconds.
   console.log("at show message", tag_or_id, message)
 
   let element=tag_or_id
@@ -226,12 +235,12 @@ function show_message(message, tag_or_id, seconds){//used to display alerts to t
 }
 
 
-function store_list(){
+function store_list(){log(3,arguments,filename,store_list)
     return get_user_data().store_list 
 }
 
 
-function get_user_data(){
+function get_user_data(){log(3,arguments,filename,get_user_data)
     // reads the cookie to get a JSON block of user name, email, roles VISIBLE
     try{
       return JSON.parse(atob(get_cookie("data")))
@@ -241,7 +250,7 @@ function get_user_data(){
 }
 
 
-async function login(params){
+async function login(params){log(3,arguments,filename,login)
     // manage the login process
 
     const panel=tag("login_panel")
@@ -307,14 +316,14 @@ async function login(params){
 }
 
 
-async function logout(){
+async function logout(){log(3,arguments,filename,logout)
   erase_cookie("auth")
   erase_cookie("data")
   build_menu(unauthenticated_menu)
   navigate({fn:"show_home"})
 }
 
-async function personal_data(params){
+async function personal_data(params){log(3,arguments,filename,personal_data)
     if(!logged_in()){show_home();return}
     console.log("at personal data", params)
     hide_menu()
@@ -332,7 +341,7 @@ async function personal_data(params){
         const panel=tag("personal_data_panel")
       
         response = await server_request({  // getting the member data
-            mode:"get_user_data"
+            mode:"get_user_record"
         })
 
         if(response.status==="success"){
@@ -352,7 +361,7 @@ async function personal_data(params){
                         <option value="phone-only" ${response.data.fields.visibility==="phone-only" ?"selected":""}>my phone number only</option>
                         <option value="hide-all" ${response.data.fields.visibility==="hide-all" ?"selected":""}>no contact details</option>
                     </select><br><br>
-                    <input type="hidden" name="mode" value="update_user_data">
+                    <input type="hidden" name="mode" value="update_user_record">
                     <button id="submit_button" type="button" onclick="personal_data(form_data(this,true))">Update</button>
                 </form>   
             `    
@@ -390,7 +399,7 @@ async function personal_data(params){
     }
 }    
 
-async function create_account(params){
+async function create_account(params){log(3,arguments,filename,create_account)
     if(!user_has_role(["owner","manager","administrator"])){show_home();return}
     const panel=tag("create_account_panel")
     hide_menu()
@@ -503,7 +512,7 @@ async function create_account(params){
 }
 }    
 
-async function confirm_account(params){
+async function confirm_account(params){log(3,arguments,filename,confirm_account)
     // called by the link emailed to the user
     
     response = await server_request({
@@ -530,7 +539,7 @@ async function confirm_account(params){
 }
 
 
-async function change_password(params){
+async function change_password(params){log(3,arguments,filename,change_password)
     if(!logged_in()){show_home();return}
     const panel=tag("password_panel")
 
@@ -583,7 +592,7 @@ async function change_password(params){
 }
   
 
-async function update_user(params,panel){
+async function update_user(params,panel){log(3,arguments,filename,update_user)
     if(!user_has_role(["owner","manager","administrator"])){show_home();return}
     if(!panel){panel=tag("update_user")}
     if(typeof params === "string"){
@@ -646,7 +655,7 @@ async function update_user(params,panel){
     }    
 }
 
-async function recover_password(params){
+async function recover_password(params){log(3,arguments,filename,recover_password)
     console.log("recover_password", params)
     const panel=tag("recover")
     if(!params){
@@ -736,14 +745,22 @@ async function recover_password(params){
     }    
 }
 
-function message(params){
+function message(parameters){log(3,arguments,filename,message)
     //returns a reference to the message created
-    // Example params{
+    // Example parameters{
     //     message:"Password must contain at least one Capital letter",
     //     title:"User Error",
     //     kind:"error",
     //     seconds:4
     // }
+    let params
+    if(typeof parameters==="string"){
+        params={
+            message:parameters
+        }
+    }else{
+        params=parameters
+    }
 
     if(!params.title){params.title="Message"}
     if(!params.seconds){params.seconds=0}
@@ -778,11 +795,11 @@ function message(params){
 
 }
 
-function logged_in(){
+function logged_in(){log(2,arguments,filename,logged_in)
     return !!get_cookie("auth")
 }
 
-function user_has_role(array_of_permitted_roles){
+function user_has_role(array_of_permitted_roles){log(3,arguments,filename,user_has_role)
     //returns true if the logged in user has at least one of the roles specified
     // if no roles specified, returns true if the user is logged in
     if(array_of_permitted_roles){
@@ -797,3 +814,77 @@ function user_has_role(array_of_permitted_roles){
         return !!get_cookie("auth")
     }
 }
+
+
+
+
+          ///////////////////////////////////////////////////////
+         //                                                   //
+        //             Functions for Logging                 //
+       //                                                   //   
+      ///////////////////////////////////////////////////////
+
+
+    
+    function log(...args){
+        if(args.length===0){return} 
+
+        const level=args.shift()
+        if(isNaN(level) || level<1){return}// return if loglevel is not in valid range for output
+
+        if(args.length===0){return}   // if all that was passed in is a loglevel, there is nothing to log
+
+        if( level < log_level){return} // the level of this log call is below the current threshold for display.  get out
+
+        if(args.length===3 && typeof args[0] === "object" && args[1].slice(-3).toLowerCase()===".js" && typeof args[2]==="function"){
+            // this block is for logging function calls
+            // an example call to invoke this 
+            // log(2,arguments,filename)
+    
+            const func=args[2]
+            let file_clause = ""
+            if(args[1]){
+                if (supress_logs_from_files.includes(args[1])){
+                    return
+                }
+                file_clause = " from the file named [" + args[1] + "]"
+            }
+
+            const css='color:green;background:#eee;padding:5px'
+            const param_names = paramNames(func)
+            const param_vals = args[0]
+            let max_name_size=0
+            for(const name of param_names){
+                if(name.length>max_name_size){
+                    max_name_size=name.length
+                }
+            }
+            if(param_names.length===0){
+                file_clause +=  " without arguments                           "
+            }else{
+                file_clause +=  " with the following arguments:                           "
+            }
+            console.log ("%c" + func.name + "         was called" + file_clause ,css)
+            for(let p=0;p<param_names.length;p++){
+                let val
+        
+                if(param_vals.length > p){
+                    val= param_vals[p]
+                }
+                console.log("%c" + param_names[p].padStart(max_name_size+2), css, val)
+                
+            }
+        }else{
+            console.log(...args)
+        }
+    }
+    
+    function paramNames(func) {  // returns an array of argument names if passed a function
+        return (func + '')
+          .replace(/[/][/].*$/mg,'') // strip single-line comments
+          .replace(/\s+/g, '') // strip white space
+          .replace(/[/][*][^/*]*[*][/]/g, '') // strip multi-line comments  
+          .split('){', 1)[0].replace(/^[^(]*[(]/, '') // extract the parameters  
+          .replace(/=[^,]+/g, '') // strip any ES6 defaults  
+          .split(',').filter(Boolean); // split & filter [""]
+    }  
